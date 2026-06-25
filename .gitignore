@@ -1,0 +1,54 @@
+# --- Segredos / credenciais (NUNCA versionar — P-10) ---
+*.pem
+*.key
+*.pfx
+*.p12
+.env
+.env.*
+!.env.example
+
+# --- Symlink local de agentes globais (quando usado) ---
+.agents/
+
+# --- SQLite (ADR-0003 §4 — arquivo de dados fora do VCS) ---
+*.db
+*.db-wal
+*.db-shm
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# --- Node / Frontend ---
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# --- Go ---
+bin/
+*.test
+*.out
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Infra / tooling ---
+.terraform/
+*.tfstate
+*.tfstate.*
+.claude/scheduled_tasks.lock

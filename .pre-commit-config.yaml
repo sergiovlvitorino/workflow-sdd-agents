@@ -1,0 +1,65 @@
+# .pre-commit-config.yaml
+#
+# Baseline de hooks do projeto-base, agnóstico de stack. Garante higiene mínima
+# (whitespace, EOF, YAML) + detecção de segredos antes do commit.
+#
+# Instalação (uma vez por clone):
+#   pipx install pre-commit   # ou: uv tool install pre-commit / pip install pre-commit
+#   pre-commit install
+#
+# Rodar manualmente em tudo:
+#   pre-commit run --all-files
+#
+# Ao adotar uma stack, DESCOMENTE o bloco de lint/format correspondente e
+# **PINE a versão na MESMA do CI** — divergência de versão reintroduz exatamente
+# o atrito que este arquivo fecha (ver docs/lessons/process.md).
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: (?i)/fixtures/        # fixtures bytewise — não tocar
+      - id: end-of-file-fixer
+        exclude: (?i)/fixtures/
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  # Detecção de segredos (P-10) — bloqueante.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+
+  # --- Python (descomente e pine a versão do CI) ---
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.7.4   # PIN = versão do CI (uv.lock). NÃO usar "latest".
+  #   hooks:
+  #     - id: ruff
+  #       args: [--fix]
+  #     - id: ruff-format
+
+  # --- JS/TS (frontend Angular — ESLint 9.28.0 pinado, restrito a frontend/) ---
+  - repo: local
+    hooks:
+      - id: eslint-frontend
+        name: eslint (frontend)
+        entry: bash -c 'cd frontend && npx eslint@9.28.0 src --ext .ts'
+        language: system
+        files: ^frontend/src/.*\.(ts)$
+        pass_filenames: false
+
+      - id: tsc-frontend-app
+        name: tsc typecheck app (frontend)
+        entry: bash -c 'cd frontend && npx tsc --noEmit -p tsconfig.app.json'
+        language: system
+        files: ^frontend/src/.*\.(ts)$
+        pass_filenames: false
+
+      - id: tsc-frontend-spec
+        name: tsc typecheck specs (frontend)
+        entry: bash -c 'cd frontend && npx tsc --noEmit -p tsconfig.spec.json'
+        language: system
+        files: ^frontend/src/.*\.(ts)$
+        pass_filenames: false

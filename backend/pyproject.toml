@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=75.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blog-tutorial"
+version = "0.1.0"
+description = "Blog tutorial — projeto didático SDD (Sprint 1)"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.32.0",
+    "pydantic==2.9.0",
+    "python-ulid==3.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.3",
+    "pytest-cov==7.1.0",
+    "httpx==0.28.1",
+    "ruff==0.15.12",
+    "mypy==1.20.2",
+    "pytest-randomly==3.16.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+# Política de cobertura (T-S2-09 / P-07):
+#   Global 99 com folga de 1 ponto para código defensivo não-crítico — evita
+#   forçar testes artificiais ou # pragma: no cover em guards futuros.
+#   Categorias de risco (domínio, idempotência, isolamento, API, erros, adapter)
+#   mantidas em 100% cada, medidas separadamente em coverage-gates.sh (gate AND).
+#   # pragma: no cover só com justificativa escrita no comentário da linha.
+#   Ratchet: o piso global só sobe, nunca desce sem ADR (P-07).
+addopts = "--cov=blog --cov-report=term-missing --cov-branch --cov-fail-under=99"
+
+# ---------------------------------------------------------------------------
+# coverage
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+branch = true
+source = ["blog"]
+
+# ---------------------------------------------------------------------------
+# ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+# ---------------------------------------------------------------------------
+# mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+strict = true
+python_version = "3.10"
+mypy_path = "src"
+packages = ["blog"]

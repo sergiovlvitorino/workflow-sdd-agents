@@ -1,0 +1,19 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+.angular/
+
+# Cobertura
+coverage/
+
+# Cache
+.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IMPORTANTE: src/app/api/generated/ NAO esta aqui — o gerado e versionado (ADR-0005 §8).
+# Mudar isso exige ADR.
