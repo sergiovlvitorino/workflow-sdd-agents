@@ -71,6 +71,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Guard — lockfile sem entradas-fantasma (deps opcionais sem version)
+        run: node -e "const l=require('./package-lock.json');const bad=Object.entries(l.packages).filter(([k,v])=>k&&!v.link&&!('version' in v));if(bad.length){console.error('package-lock.json tem entradas sem version (regenere com npm 10):');bad.forEach(([k])=>console.error(' -',k));process.exit(1)}console.log('lockfile OK:',Object.keys(l.packages).length,'entradas,','0 sem version')"
+
       - name: npm ci (deps pinadas)
         run: npm ci
 
