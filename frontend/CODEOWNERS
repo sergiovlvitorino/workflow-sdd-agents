@@ -1,0 +1,5 @@
+# CODEOWNERS — protege o arquivo gerado de edicoes manuais (ADR-0005 §8).
+# Qualquer PR que toque src/app/api/generated/ exige revisao do TL Frontend.
+# Use "npm run gen:api" para atualizar — nunca edite manualmente.
+
+src/app/api/generated/ @tl-frontend

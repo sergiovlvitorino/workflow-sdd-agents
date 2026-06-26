@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main"]
+
+# Gate AND: ambos os jobs devem passar para merge (nunca media global combinada — ADR-0001 §4.1)
+jobs:
+  # =========================================================================
+  # Job backend — Python / FastAPI
+  # =========================================================================
+  backend:
+    name: Backend — Testes + cobertura (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Instalar dependências (incluindo dev)
+        run: pip install -e ".[dev]"
+
+      # Gate 1: suíte completa + gate global
+      - name: Rodar suíte completa (gate global)
+        run: pytest
+
+      # Gate 2: pisos por-categoria (gate AND)
+      - name: Gates por-categoria
+        run: bash coverage-gates.sh
+
+  # =========================================================================
+  # Job frontend — Angular / TypeScript / Vitest
+  # 2o ratchet (cobertura front) barrado SEPARADAMENTE do backend.
+  # Nunca media global combinada (ADR-0001 §4.1, P-07).
+  # =========================================================================
+  frontend:
+    name: Frontend — Drift + Lint + Testes + Cobertura
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python (para dump_openapi.py)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências Python do backend
+        run: pip install -e ".[dev]"
+        working-directory: backend
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Guard — lockfile sem entradas-fantasma (deps opcionais sem version)
+        run: node -e "const l=require('./package-lock.json');const bad=Object.entries(l.packages).filter(([k,v])=>k&&!v.link&&!('version' in v));if(bad.length){console.error('package-lock.json tem entradas sem version (regenere com npm 10):');bad.forEach(([k])=>console.error(' -',k));process.exit(1)}console.log('lockfile OK:',Object.keys(l.packages).length,'entradas,','0 sem version')"
+
+      - name: npm ci (deps pinadas)
+        run: npm ci
+
+      # Gate de drift: regenera tipos do app vivo e verifica diff vazio.
+      # Drift = build VERMELHO (P-11 — falha explícita, nunca aviso).
+      # Distinto do ratchet de cobertura (ADR-0005 §8 "não fundir").
+      - name: Gate de drift de contrato (gen:api + git diff --exit-code)
+        run: |
+          npm run gen:api
+          node scripts/check-generated-header.mjs
+          git diff --exit-code -- src/app/api/generated/openapi-types.ts src/app/api/generated/openapi.json
+
+      # Gate de typecheck: garante que os specs usam os tipos gerados corretamente.
+      # Sem isso, fixture com campo errado (ex: total em PagePost) passa no Vitest/esbuild
+      # mas falha aqui — capturando drift de tipo nos tests (complemento ao gen:api:check).
+      - name: Typecheck app (tsconfig.app.json)
+        run: npx tsc --noEmit -p tsconfig.app.json
+
+      - name: Typecheck specs (tsconfig.spec.json)
+        run: npx tsc --noEmit -p tsconfig.spec.json
+
+      # Lint pinado (eslint 9.28.0 — inclui barreira de import do gerado)
+      - name: Lint (ESLint pinado)
+        run: npm run lint
+
+      # 2o ratchet: cobertura do frontend com thresholds (vitest.config.ts)
+      # NUNCA combinado com a cobertura do backend.
+      - name: Testes + cobertura (2o ratchet front)
+        run: npm run test:cov

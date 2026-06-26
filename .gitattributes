@@ -1,0 +1,20 @@
+# Normalização de EOL — evita que CRLF no checkout Windows engane o `--check`
+# do formatador e quebre comparações byte-a-byte (ver docs/lessons/process.md).
+* text=auto eol=lf
+
+# Scripts shell e Makefiles sempre LF
+*.sh   text eol=lf
+Makefile text eol=lf
+
+# Arquivos Windows sempre CRLF
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Fixtures comparadas byte-a-byte (golden/recorded) — NUNCA normalizar EOL.
+# Qualquer conversão LF↔CRLF quebraria contract/golden tests. Ajuste o glob ao seu layout.
+tests/**/fixtures/**/golden/*    -text
+tests/**/fixtures/**/recorded/*  -text
+
+# Artefatos vendorizados cuja proveniência/hash importa — preservar EOL de origem.
+# Ex.: **/vendor/**/*.xsd -text

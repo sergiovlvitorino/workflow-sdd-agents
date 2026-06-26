@@ -1,0 +1,94 @@
+{
+  "health_200": {
+    "status": "ok"
+  },
+  "idempotency_key_conflict_409": {
+    "detail": "A chave de idempotência já foi usada com um payload diferente.",
+    "status": 409,
+    "title": "Conflito de idempotência",
+    "type": "https://blog-tutorial/errors/idempotency_key_conflict"
+  },
+  "idempotency_key_required_400": {
+    "detail": "O header 'Idempotency-Key' é obrigatório em rotas de escrita.",
+    "status": 400,
+    "title": "Idempotency-Key obrigatório",
+    "type": "https://blog-tutorial/errors/idempotency_key_required"
+  },
+  "invalid_cursor_400": {
+    "detail": "O cursor de paginação é malformado ou corrompido.",
+    "status": 400,
+    "title": "Cursor inválido",
+    "type": "https://blog-tutorial/errors/invalid_cursor"
+  },
+  "post_created_201": {
+    "content": "Conteúdo da fixture de contrato.",
+    "created_at": "2026-06-25T13:54:32.060763Z",
+    "id": "01KVZGZ5FWAYA482ZAKRME8RF9",
+    "published_at": null,
+    "status": "draft",
+    "title": "Post de Fixture"
+  },
+  "post_get_200": {
+    "content": "Conteúdo da fixture de contrato.",
+    "created_at": "2026-06-25T13:54:32.060763Z",
+    "id": "01KVZGZ5FWAYA482ZAKRME8RF9",
+    "published_at": "2026-06-25T13:54:32.064711Z",
+    "status": "published",
+    "title": "Post de Fixture"
+  },
+  "post_not_found_404": {
+    "detail": "Nenhum post publicado com o id informado.",
+    "status": 404,
+    "title": "Post não encontrado",
+    "type": "https://blog-tutorial/errors/post_not_found"
+  },
+  "post_not_found_404_nonexistent": {
+    "detail": "Nenhum post publicado com o id informado.",
+    "status": 404,
+    "title": "Post não encontrado",
+    "type": "https://blog-tutorial/errors/post_not_found"
+  },
+  "post_published_200": {
+    "content": "Conteúdo da fixture de contrato.",
+    "created_at": "2026-06-25T13:54:32.060763Z",
+    "id": "01KVZGZ5FWAYA482ZAKRME8RF9",
+    "published_at": "2026-06-25T13:54:32.064711Z",
+    "status": "published",
+    "title": "Post de Fixture"
+  },
+  "post_replay_200": {
+    "content": "Conteúdo da fixture de contrato.",
+    "created_at": "2026-06-25T13:54:32.060763Z",
+    "id": "01KVZGZ5FWAYA482ZAKRME8RF9",
+    "published_at": null,
+    "status": "draft",
+    "title": "Post de Fixture"
+  },
+  "posts_list_200": {
+    "items": [
+      {
+        "content": "Conteúdo da fixture de contrato.",
+        "created_at": "2026-06-25T13:54:32.060763Z",
+        "id": "01KVZGZ5FWAYA482ZAKRME8RF9",
+        "published_at": "2026-06-25T13:54:32.064711Z",
+        "status": "published",
+        "title": "Post de Fixture"
+      }
+    ],
+    "limit": 10,
+    "next_cursor": null
+  },
+  "validation_error_422": {
+    "detail": "Um ou mais campos são inválidos.",
+    "errors": [
+      {
+        "code": "string_too_short",
+        "field": "title",
+        "message": "String should have at least 1 character"
+      }
+    ],
+    "status": 422,
+    "title": "Erro de validação",
+    "type": "https://blog-tutorial/errors/validation_error"
+  }
+}

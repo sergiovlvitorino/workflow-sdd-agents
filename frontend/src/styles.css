@@ -1,0 +1,77 @@
+/* Reset enxuto + tokens CSS */
+:root {
+  --color-text: #1a1a1a;
+  --color-background: #ffffff;
+  --color-primary: #0052cc;
+  --color-primary-hover: #0041a8;
+  --color-error: #d32f2f;
+  --color-border: #e0e0e0;
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --border-radius: 4px;
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background-color: var(--color-background);
+  line-height: 1.6;
+}
+
+/* Skip link para acessibilidade (WCAG 2.1 §2.4.1) */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--spacing-md);
+  background: var(--color-primary);
+  color: #fff;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  text-decoration: none;
+  z-index: 9999;
+}
+
+.skip-link:focus {
+  top: var(--spacing-md);
+}
+
+/* Focus visivel para navegacao por teclado */
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Desabilitar animacoes para quem prefere */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: var(--spacing-xl) var(--spacing-md);
+}
