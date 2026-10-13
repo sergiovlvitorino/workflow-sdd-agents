@@ -1,0 +1,23 @@
+# Dependabot — mantém SHAs de Actions e deps de backend/frontend VIVOS (SEC-07 / T-S4-04).
+# Pin por SHA sem Dependabot vira dívida oposta: deps congelam e acumulam CVE.
+# O Dependabot atualiza o par SHA + comentário de tag (github-actions) e refaz os
+# locks (pip/npm), mantendo o pin ATUALIZADO em vez de fóssil.
+version: 2
+updates:
+  # Actions de terceiros pinadas por SHA no .github/workflows/*.yml
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Backend Python (pyproject.toml / requirements.lock quando existir)
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+
+  # Frontend Node (package.json / package-lock.json)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
