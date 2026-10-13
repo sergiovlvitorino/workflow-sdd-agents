@@ -113,3 +113,84 @@ def test_post_create_uses_injected_id_and_clock() -> None:
     assert post.created_at == FIXED_NOW
     assert post.status == PostStatus.DRAFT
     assert post.published_at is None
+
+
+# ---------------------------------------------------------------------------
+# ADR-0007: claim-antes-de-criar — 3 novas ramificações do use-case
+# (vencedor / perdedor-replay / perdedor-409), com fakes determinísticos.
+# ---------------------------------------------------------------------------
+
+
+class _WinnerIdem:
+    """Fake que sempre vence o claim (put -> True)."""
+
+    def get(self, key: str) -> tuple[str, dict[str, object]] | None:
+        return None
+
+    def put(self, key: str, payload_hash: str, response_json: dict[str, object]) -> bool:
+        return True
+
+
+class _LoserReplayIdem:
+    """Fake que sempre perde o claim e devolve, no get pós-put, o valor do 'vencedor' (mesmo payload)."""
+
+    def __init__(self, winner_hash: str, winner_resp: dict[str, object]) -> None:
+        self._winner_hash = winner_hash
+        self._winner_resp = winner_resp
+        self._get_calls = 0
+
+    def get(self, key: str) -> tuple[str, dict[str, object]] | None:
+        self._get_calls += 1
+        if self._get_calls == 1:
+            return None  # fast-path sequencial: chave "ainda não vista"
+        return self._winner_hash, self._winner_resp  # perdedor lê o vencedor
+
+    def put(self, key: str, payload_hash: str, response_json: dict[str, object]) -> bool:
+        return False  # sempre perde
+
+
+def test_execute_winner_branch_persists_post_and_returns_replayed_false() -> None:
+    """Vencedor do claim: won=True → repo.add() é chamado, replayed=False."""
+    repo = InMemoryPostRepository()
+    uc = _make_use_case(repo=repo, idem=_WinnerIdem())  # type: ignore[arg-type]
+
+    resp, replayed = uc.execute("key-winner", "Título", "Conteúdo")
+
+    assert replayed is False
+    assert resp["id"] == FIXED_ID
+    assert repo.count() == 1  # só o vencedor persiste
+
+
+def test_execute_loser_branch_replays_winner_without_creating_post() -> None:
+    """Perdedor do claim, mesmo payload: replay do vencedor, sem add()."""
+    repo = InMemoryPostRepository()
+    winner_hash = _sha256_payload_for_test("Título", "Conteúdo")
+    winner_resp: dict[str, object] = {"id": "winner-id", "status": PostStatus.DRAFT.value}
+    idem = _LoserReplayIdem(winner_hash, winner_resp)
+    uc = _make_use_case(repo=repo, idem=idem)  # type: ignore[arg-type]
+
+    resp, replayed = uc.execute("key-loser", "Título", "Conteúdo")
+
+    assert replayed is True
+    assert resp["id"] == "winner-id"
+    assert repo.count() == 0  # perdedor NÃO persiste
+
+
+def test_execute_loser_branch_divergent_payload_raises_conflict() -> None:
+    """Perdedor do claim, payload divergente do vencedor: IdempotencyConflict (P-11)."""
+    repo = InMemoryPostRepository()
+    winner_hash = _sha256_payload_for_test("Título original", "Conteúdo original")
+    winner_resp: dict[str, object] = {"id": "winner-id", "status": PostStatus.DRAFT.value}
+    idem = _LoserReplayIdem(winner_hash, winner_resp)
+    uc = _make_use_case(repo=repo, idem=idem)  # type: ignore[arg-type]
+
+    with pytest.raises(IdempotencyConflict):
+        uc.execute("key-loser-conflict", "Título diferente", "Conteúdo diferente")
+
+    assert repo.count() == 0  # perdedor NÃO persiste, nem sob conflito
+
+
+def _sha256_payload_for_test(title: str, content: str) -> str:
+    from blog.application.create_post import _sha256_payload
+
+    return _sha256_payload(title, content)

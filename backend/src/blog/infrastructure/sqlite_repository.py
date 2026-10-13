@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # Helpers de serialização de datetime
 # ---------------------------------------------------------------------------
 
+
 def _iso(dt: datetime | None) -> str | None:
     """Serializa datetime tz-aware UTC para ISO-8601 com sufixo +00:00."""
     return dt.isoformat() if dt is not None else None
@@ -104,6 +105,7 @@ def make_connection(db_path: str) -> SqliteHandle:
 # Mapeamento row → Post
 # ---------------------------------------------------------------------------
 
+
 def _row_to_post(row: sqlite3.Row) -> Post:
     return Post(
         id=row["id"],
@@ -118,6 +120,7 @@ def _row_to_post(row: sqlite3.Row) -> Post:
 # ---------------------------------------------------------------------------
 # SqlitePostRepository
 # ---------------------------------------------------------------------------
+
 
 class SqlitePostRepository:
     """Repositório de posts com persistência SQLite (ADR-0003).
@@ -161,9 +164,7 @@ class SqlitePostRepository:
 
     def get(self, id: str) -> Post | None:
         """Retorna Post por PK ou None se ausente."""
-        row = self._conn.execute(
-            "SELECT * FROM posts WHERE id = ?", (id,)
-        ).fetchone()
+        row = self._conn.execute("SELECT * FROM posts WHERE id = ?", (id,)).fetchone()
         return _row_to_post(row) if row is not None else None
 
     def count(self) -> int:
@@ -179,8 +180,7 @@ class SqlitePostRepository:
         """Keyset (published_at DESC, id DESC) com row-value estrito '<' (ADR-0002)."""
         if after is None:
             rows = self._conn.execute(
-                "SELECT * FROM posts WHERE status = 'published' "
-                "ORDER BY published_at DESC, id DESC LIMIT ?",
+                "SELECT * FROM posts WHERE status = 'published' ORDER BY published_at DESC, id DESC LIMIT ?",
                 (limit,),
             ).fetchall()
         else:
@@ -198,6 +198,7 @@ class SqlitePostRepository:
 # SqliteIdempotencyStore
 # ---------------------------------------------------------------------------
 
+
 class SqliteIdempotencyStore:
     """Idempotency store write-once com INSERT OR IGNORE + UNIQUE (P-03, ADR-0003 §4.4).
 
@@ -212,19 +213,35 @@ class SqliteIdempotencyStore:
         self._lock = lock
 
     def get(self, key: str) -> tuple[str, dict[str, object]] | None:
-        row = self._conn.execute(
-            "SELECT payload_hash, response_json FROM idempotency_keys WHERE key = ?",
-            (key,),
-        ).fetchone()
+        """Lê sob o `_lock` compartilhado.
+
+        A conexão é compartilhada entre PostRepository e IdempotencyStore
+        (mesmo objeto, `check_same_thread=False`). Sem serializar TODO acesso
+        — leitura incluída — chamadas concorrentes de N threads na mesma
+        conexão podem levantar `sqlite3.InterfaceError` (uso concorrente não
+        serializado de cursor), exposto pelo teste de prova do ADR-0007 (N≥8
+        concorrentes). O claim-antes-de-criar chama `get` no ramo perdedor
+        sob concorrência real — a leitura precisa da mesma serialização que
+        as escritas.
+        """
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT payload_hash, response_json FROM idempotency_keys WHERE key = ?",
+                (key,),
+            ).fetchone()
         if row is None:
             return None
         return row["payload_hash"], json.loads(row["response_json"])
 
-    def put(self, key: str, payload_hash: str, response_json: dict[str, object]) -> None:
-        """Write-once: INSERT OR IGNORE garante atomicidade sem sobrescrever (P-03)."""
+    def put(self, key: str, payload_hash: str, response_json: dict[str, object]) -> bool:
+        """Claim write-once atômico (ADR-0007): retorna True sse esta chamada venceu.
+
+        INSERT OR IGNORE + `_lock` compartilhado já são o árbitro atômico
+        (ADR-0003 §4.4). `rowcount==1` expõe o veredito que o SQLite já computa.
+        """
         with self._lock, self._conn:
-            self._conn.execute(
-                "INSERT OR IGNORE INTO idempotency_keys (key, payload_hash, response_json) "
-                "VALUES (?, ?, ?)",
+            cur = self._conn.execute(
+                "INSERT OR IGNORE INTO idempotency_keys (key, payload_hash, response_json) VALUES (?, ?, ?)",
                 (key, payload_hash, json.dumps(response_json, ensure_ascii=False)),
             )
+            return cur.rowcount == 1

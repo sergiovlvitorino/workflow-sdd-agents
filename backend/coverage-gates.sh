@@ -98,7 +98,8 @@ check_category \
 
 # ---------------------------------------------------------------------------
 # 3) Dominio critico — maquina de estados Post.publish (domain/post.py).
-#    Piso: 100% (P-07 Dominio: minimo 95; medido real 100 na Sprint 2).
+#    Piso: 100% (P-07 minimo 90 linha + 100 branch critico; ratchet QA a >=95
+#    em T-S2-09; medido real 100 na Sprint 2).
 # ---------------------------------------------------------------------------
 check_category \
     "domain" \
