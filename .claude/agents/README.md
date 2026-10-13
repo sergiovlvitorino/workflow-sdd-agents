@@ -14,10 +14,10 @@ Time de agentes versionado **dentro do repositório** (`.claude/agents/`). Como 
 | subagent_type | Stack / foco |
 |---|---|
 | `tl-python`   | Backend Python: pipelines, automação, segurança, PEP 8, pytest |
-| `tl-java`     | Spring Boot, JPA/Hibernate, DDD, Clean Architecture |
+| `tl-java`     | Spring Boot 3/4, JPA, review executado (VEREDITO), DETAIL |
 | `tl-go`       | APIs Go, concorrência, performance, padrões idiomáticos |
-| `tl-frontend` | Performance, a11y (WCAG), OWASP, Web Vitals |
-| `tl-qa`       | Estratégia de testes, quality gates, testabilidade, governança |
+| `tl-frontend` | Multi-framework: performance (INP), a11y WCAG AA, XSS/CSP, review executado |
+| `tl-qa`       | Revisor de qualidade em todo review-loop: força das asserções, gates, mutação |
 
 ### Desenvolvedores — implementação, testes, refatoração (model: sonnet)
 | subagent_type | Stack |
@@ -25,7 +25,7 @@ Time de agentes versionado **dentro do repositório** (`.claude/agents/`). Como 
 | `dev-python`   | Automação, pipelines, serverless, pytest |
 | `dev-java`     | Spring Boot, JPA, APIs REST, testes |
 | `dev-go`       | net/http, AWS SDK, Lambda, testes |
-| `dev-frontend` | Angular/TS, signals, RxJS, testes |
+| `dev-frontend` | Multi-framework (vanilla, Angular 20+, React, Vue) — detecta pelo projeto |
 
 ### Especialistas — escalonamento após 3 ciclos sem sucesso (model: opus)
 | subagent_type | Stack |

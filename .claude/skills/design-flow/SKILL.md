@@ -25,7 +25,7 @@ Quando há uma decisão de design/arquitetura com mais de um caminho plausível 
 | Passo | Agente |
 |-------|--------|
 | Levantar contexto/restrições do código | `Explore` (read-only) |
-| Propor abordagem (painel, em paralelo) | 2–3 `tl-*` por ângulo/stack (`tl-python`, `tl-frontend`, `tl-java`, `tl-go`, `fullstack-tech-lead`, `java-tech-lead`) |
+| Propor abordagem (painel, em paralelo) | 2–3 `tl-*` por ângulo/stack (`tl-python`, `tl-frontend`, `tl-java`, `tl-go`, `fullstack-tech-lead` — só quando a decisão cruza Java e Angular) |
 | Síntese e ADR | orquestrador, ou um `tl` sênior / `fullstack-tech-lead` |
 
 ## Procedimento
