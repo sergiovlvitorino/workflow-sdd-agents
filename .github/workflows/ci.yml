@@ -58,6 +58,9 @@ jobs:
       #   `pip` do runner (toolchain) some sozinho (os PYSEC-2026-196/1795/1796/2875/2876).
       - name: Audit de deps (pip-audit)
         run: |
+          # pip do runner varia com a imagem; atualizar evita reprovar por CVE do toolchain
+          # que já tem fix (ex.: PYSEC-2026-3721, corrigido no pip 26.2).
+          python -m pip install --upgrade pip
           pip install pip-audit==2.10.1
           IGNORES=""
           # --- starlette 0.38.6 (transitiva de fastapi==0.115.0; fix exige bump -> SEC-15) ---
@@ -143,6 +146,12 @@ jobs:
             'GHSA-39pv-4j6c-2g6v', // SEC-16, review-by: 2026-10-15 - @angular/common cache key hashing fraco (HttpTransferCache), sem fix em 19.x
             'GHSA-58w9-8g37-x9v5', // SEC-16, review-by: 2026-10-15 - @angular/compiler two-way binding sanitization bypass, sem fix em 19.x
             'GHSA-rgjc-h3x7-9mwg', // SEC-16, review-by: 2026-10-15 - @angular/core hydration DOM clobbering / cache poisoning, sem fix em 19.x
+            // Publicados após a Sprint 4 (auditados em 2026-10-13); 19.2.25 é a última 19.x, fix só no major (21.2.25).
+            'GHSA-jhpw-976m-542j', // SEC-16, review-by: 2026-10-15 - @angular/common cache-key ambíguo no HttpTransferCache, sem fix em 19.x
+            'GHSA-p297-fm68-3q8c', // SEC-16, review-by: 2026-10-15 - @angular/common leak via bypass do HttpTransferCache, sem fix em 19.x
+            'GHSA-jj27-h5hq-8x99', // SEC-16, review-by: 2026-10-15 - @angular/core+compiler XSS i18n em atributos de evento, sem fix em 19.x
+            'GHSA-hh8m-fm6v-7cvg', // SEC-16, review-by: 2026-10-15 - @angular/core+compiler sanitization bypass em host bindings, sem fix em 19.x
+            'GHSA-ff3f-86qr-9cv3', // SEC-16, review-by: 2026-10-15 - @angular/router DoS no SSR (app não usa SSR), sem fix em 19.x
           ]);
           const a = require('./audit.json');
           const found = new Map();
