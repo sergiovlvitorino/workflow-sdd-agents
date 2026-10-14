@@ -58,9 +58,9 @@ jobs:
       #   `pip` do runner (toolchain) some sozinho (os PYSEC-2026-196/1795/1796/2875/2876).
       - name: Audit de deps (pip-audit)
         run: |
-          # pip do runner varia com a imagem; atualizar evita reprovar por CVE do toolchain
-          # que já tem fix (ex.: PYSEC-2026-3721, corrigido no pip 26.2).
-          python -m pip install --upgrade pip
+          # pip/setuptools do runner variam com a imagem; atualizar evita reprovar por CVE do toolchain
+          # que já tem fix (ex.: PYSEC-2026-3721 no pip, PYSEC-2026-3447 no setuptools 79).
+          python -m pip install --upgrade pip setuptools
           pip install pip-audit==2.10.1
           IGNORES=""
           # --- starlette 0.38.6 (transitiva de fastapi==0.115.0; fix exige bump -> SEC-15) ---
