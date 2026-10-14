@@ -1,9 +1,10 @@
 # Falsos positivos por fingerprint (escopo exato: commit:arquivo:regra:linha).
 # Todos são a AWS access key de EXEMPLO da documentação oficial
-# (AKIAIOSFODNN7EXAMPLE — inválida, não é credencial), usada como canário
+# (inválida, não é credencial — ver comentário do harness), usada como canário
 # sintético do T-S4-01. Ignorar por fingerprint mantém a regra aws-access-token
 # ativa para qualquer outra ocorrência; o harness scripts/gitleaks-canary-test.sh
 # varre um tmpdir (--no-git) e não lê este arquivo, então segue detectando.
 1bbb4038527375f6e9e897a6cd33058ca0246b2e:scripts/gitleaks-canary-test.sh:aws-access-token:6
 1bbb4038527375f6e9e897a6cd33058ca0246b2e:scripts/gitleaks-canary-test.sh:aws-access-token:37
 d2d6a97763fb41ee49adbb4c3df95be04793e080:specs/tasks/sprint-04/DETAIL-T-S4-01-gitleaks-ci.md:aws-access-token:79
+8dd68de8bd49776d87299256156d09f4b21ae1c9:.gitleaksignore:aws-access-token:3
