@@ -152,6 +152,9 @@ jobs:
             'GHSA-jj27-h5hq-8x99', // SEC-16, review-by: 2026-10-15 - @angular/core+compiler XSS i18n em atributos de evento, sem fix em 19.x
             'GHSA-hh8m-fm6v-7cvg', // SEC-16, review-by: 2026-10-15 - @angular/core+compiler sanitization bypass em host bindings, sem fix em 19.x
             'GHSA-ff3f-86qr-9cv3', // SEC-16, review-by: 2026-10-15 - @angular/router DoS no SSR (app não usa SSR), sem fix em 19.x
+            // Publicados em 2026-10-20; sem fix em 19.x, fix só no major (20.3.33+ / 21.x / 22.x).
+            'GHSA-62vg-58rm-qff7', // SEC-16, review-by: 2026-11-20 - @angular/router DoS no SSR por outlet de path vazio (app não usa SSR), sem fix em 19.x
+            'GHSA-jfgx-762w-99vr', // SEC-16, review-by: 2026-11-20 - @angular/common vazamento do token XSRF por parsing de URL (app sem cookie/auth, nenhum token a vazar), sem fix em 19.x
           ]);
           const a = require('./audit.json');
           const found = new Map();
