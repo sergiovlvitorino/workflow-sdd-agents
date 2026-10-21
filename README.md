@@ -7,7 +7,7 @@ Este repositório é um **projeto-base (template)**. Projetos novos nascem a par
 | Diretório | O que é |
 |---|---|
 | [`specs/`](specs/) | SDD: a [constitution](specs/000-constitution.md) (princípios invioláveis, já vigente) + templates de overview, domínio, RFs, NFRs, contrato de API, arquitetura, test-strategy, features (Gherkin), ADRs e tarefas (DETAIL). |
-| [`.claude/skills/`](.claude/skills/) | 9 fluxos de orquestração multi-agente: `discovery-flow`, `sprint-flow`, `review-loop`, `bug-flow`, `coverage-flow`, `debt-flow`, `design-flow`, `hardening-flow`, `hotfix-flow`. |
+| [`.claude/skills/`](.claude/skills/) | 9 fluxos de orquestração multi-agente: `discovery-flow`, `sprint-flow`, `review-loop`, `bug-flow`, `coverage-flow`, `debt-flow`, `design-flow`, `hardening-flow`, `hotfix-flow` — mais a skill de auditoria `security-analysis`, que o `hardening-flow` usa. |
 | [`.claude/agents/`](.claude/agents/) | Time de agentes (PO, Tech Leads, Devs, QA, SRE, especialistas) — ver [agents/README](.claude/agents/README.md). |
 | [`docs/lessons/`](docs/lessons/) | Playbooks de engenharia destilados (process, python, qa, security, sre) — o piso de rigor, consumido pelos agentes e evoluído nas retrospectivas. |
 | [`docs/retrospectivas/`](docs/retrospectivas/), [`docs/runbooks/`](docs/runbooks/), [`docs/quality/`](docs/quality/) | Templates de retrospectiva, runbook operacional e baseline de mutation. |
@@ -35,7 +35,7 @@ backlog ──sprint-flow──▶ plano + DETAIL ──review-loop──▶ imp
                           aprendizados → docs/lessons/ + memória local
 ```
 
-Fluxos de manutenção: `bug-flow` (correção dirigida por teste), `coverage-flow` (subir cobertura), `debt-flow` (refactor preservando comportamento), `hardening-flow` (segurança), `hotfix-flow` (incidente em produção).
+Fluxos de manutenção: `bug-flow` (correção dirigida por teste), `coverage-flow` (subir cobertura), `debt-flow` (refactor preservando comportamento), `hardening-flow` (segurança; auditoria executada pela `security-analysis`), `hotfix-flow` (incidente em produção).
 
 ---
 
@@ -65,7 +65,7 @@ Uma skill é um fluxo multi-agente pronto. **Como acionar:** digite o comando ba
 | **`bug-flow`** | relatou um bug e quer fix **com teste de regressão** | `/bug-flow <bug>` | QA reproduz com teste **vermelho** primeiro → fix via `review-loop` |
 | **`debt-flow`** | quer **refatorar/pagar dívida** sem mudar comportamento | `/debt-flow <alvo>` | testes de caracterização fixam o comportamento → refactor não pode alterá-los |
 | **`coverage-flow`** | precisa **subir cobertura** de um módulo até o gate | `/coverage-flow <alvo>` | só adiciona testes (prioriza risco); não toca código de produção |
-| **`hardening-flow`** | quer **revisão de segurança** e correção por severidade | `/hardening-flow <escopo>` | painel audita superfície de ataque → corrige bloqueantes com teste que prova a falha fechada |
+| **`hardening-flow`** | quer **revisão de segurança** e correção por severidade | `/hardening-flow <escopo>` | reaudita exceções e riscos aceitos vencidos → scanners (`security-analysis`) + painel auditam a superfície → corrige bloqueantes com teste que prova a falha fechada e gate anti-regressão |
 | **`hotfix-flow`** | há **incidente em produção** e o tempo-até-mitigação manda | `/hotfix-flow <incidente>` | SRE diagnostica → fix mínimo → 1 ciclo enxuto → deploy; dívida registrada para depois |
 
 ## 2. Agentes — o time que as skills acionam

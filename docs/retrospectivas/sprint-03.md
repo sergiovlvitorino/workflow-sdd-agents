@@ -48,6 +48,7 @@ A trilha fecha: **frontend Angular consumindo o contrato, observabilidade dia-1,
 - **`_to_response_dict` / `_log_error` / `_emit` duplicados** entre módulos — extrair serialização/emissão para helpers compartilhados (`application/serialization.py`, `observability.emit_event`). Candidatos a `debt-flow`.
 - **Allowlist do evento de log de ERRO sem teste de igualdade exata** (só o de sucesso tem) — fechar a simetria anti-PII.
 - **F006 (readiness/dashboard)** fora do MVP — só o healthcheck liveness entrou.
+- **Dívida de segurança (auditoria `hardening-flow`, 2026-07-15)** — 14 achados triados registrados em [`docs/quality/hardening-baseline-2026-07.md`](../quality/hardening-baseline-2026-07.md) (0 Crítico, 2 Alto, 7 Médio, 5 Baixo); decisão do dono foi documentar como dívida, sem fix. Prioritários: **SEC-02** (gitleaks fora do CI — piso "secret-scan bloqueante" quebrado) e **SEC-01** (Angular 19.2.14 exposto ao CVE-2025-66412). Candidatos a `hardening-flow` quando saírem da dívida.
 
 ## 🔗 Memórias do agente geradas
 

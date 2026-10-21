@@ -23,6 +23,16 @@
 - **Senha de teste canônica** (ex.: `testpassword`) para o scanner não acusar credencial de fixture como real.
 - **Supressão cirúrgica e justificada:** quando uma primitiva fraca é exigida por um sistema externo legado (ex.: SHA1 numa assinatura que um parceiro externo legado exige), suprima o achado **na linha** com justificativa (`# nosec ...`), não globalmente.
 
+## Gates de vulnerabilidade de dependências (pip-audit / npm audit)
+
+Origem: 2026-07 (Sprint 4 hardening blog-tutorial).
+
+- **Rode o audit DE VERDADE antes de declarar o DoD do gate alcançável.** A base de advisories é viva: a premissa "deps limpas" que um DETAIL escreveu envelhece entre a escrita e a execução. `pip-audit`/`npm audit` reais desenterram CVEs novos — inclusive **transitivos** (ex.: um framework web pinado arrasta uma versão vulnerável de sua dependência de baixo nível) e um **auth-bypass em produção** que "não invente CVE" jamais anteciparia. O achado real não é bug do gate — é o gate fazendo o trabalho; vira **dívida rastreada**, não bloqueio.
+- **Advisory sem fix disponível → fail-closed + allowlist cirúrgica por-ID, NUNCA warning.** Rebaixar o step para `... || true`/`::warning::` é **fail-open**: uma High nova e corrigível passa despercebida amanhã. O padrão correto (espelha o `# nosec` cirúrgico) é manter o gate **bloqueante** e ignorar **só** os IDs sem fix, cada um com motivo + `review-by:<data>` + item de dívida — qualquer advisory fora da lista ainda reprova. Sem ferramenta de allowlist nativa (ex.: `npm audit`), um guard inline (`--json` + `node`/`jq` que filtra a allowlist e `exit 1` no resto) faz o mesmo sem nova dependência.
+- **Gate que nasce vermelho SEM caminho para verde no próprio deliverable não é red-green — é build quebrado.** Um bloqueante que trava todos os merges por um CVE sem fix treina o time a ignorar o vermelho. Feche no verde no mesmo PR (allowlist cirúrgica time-boxed) **ou** o gate não entra. Diferente do canário (que verdeja ao remover), o CVE-sem-fix precisa da exceção rastreada.
+- **Mantenha os gates das stacks SIMÉTRICOS.** Se o backend é `pip-audit` fail-closed com ignores rastreados, o frontend não pode ser `npm audit` warning — a assimetria vira piso mais fraco numa stack. Ambos bloqueantes, ambos com allowlist por-ID + `review-by`.
+- **A allowlist preserva a âncora do CVE que você fechou.** Ao alista só os advisories residuais (sem fix), o CVE que o bump/patch resolveu **não** entra na lista → reverter a dep para a versão vulnerável o traz de volta como "fora da allowlist" → vermelho. É a prova executável de "fechei o CVE-alvo", que some se você rebaixar tudo a warning.
+
 ## Trust store / cadeia de certificados (PKIX)
 
 - **Valide a cadeia real, não substring.** Conferir o "issuer" por comparação de string é falsificável. Use verificação criptográfica da emissão (`verify_directly_issued_by` / construção de cadeia PKIX), não matching textual.

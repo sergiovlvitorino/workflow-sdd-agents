@@ -6,7 +6,15 @@ on:
   pull_request:
     branches: ["main"]
 
-# Gate AND: ambos os jobs devem passar para merge (nunca media global combinada — ADR-0001 §4.1)
+# Least-privilege (SEC-07 / T-S4-04): piso global de menor privilégio.
+# Sem este bloco o GITHUB_TOKEN herda o default do repo (tipicamente read/write amplo).
+# NENHUM job eleva: backend/frontend só testam; secret-scan só lê (comentários de PR desligados).
+# Elevar SÓ por-job onde um passo escreva — nunca reabrir escopo aqui no topo.
+permissions:
+  contents: read
+
+# Gate AND: todos os jobs (backend + frontend + secret-scan) devem passar para merge
+# (nunca media global combinada — ADR-0001 §4.1).
 jobs:
   # =========================================================================
   # Job backend — Python / FastAPI
@@ -22,15 +30,56 @@ jobs:
         python-version: ["3.10", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: ${{ matrix.python-version }}
 
+      # SEC-07 (T-S4-04) — PENDENTE-DE-TOOLING: hash-pinning do backend.
+      # O alvo é instalar por lockfile de hashes:
+      #   pip install --require-hashes -r requirements.lock
+      #   pip install -e . --no-deps
+      # Gerar o `backend/requirements.lock` exige `pip-compile` (pip-tools) ou `uv`
+      # com `--generate-hashes` (runtime + extra dev, cobrindo a matrix 3.10 e 3.12).
+      # Nenhum dos dois estava disponível no ambiente do review-loop → o lock NÃO foi
+      # gerado (não se inventa um lock que não se consegue validar). Enquanto pendente,
+      # segue o install editável abaixo. Trocar assim que o lock existir.
       - name: Instalar dependências (incluindo dev)
         run: pip install -e ".[dev]"
+
+      # SEC-07 (T-S4-04) — Audit de vulnerabilidades das deps (BLOQUEANTE, fail-closed).
+      # Ferramenta PINADA (determinismo). Ignores CIRÚRGICOS por advisory, cada um
+      # justificado + rastreado na dívida SEC-15 (registrada no baseline), review-by: 2026-10-15.
+      # Qualquer advisory NÃO-listado ainda reprova (fail-closed) — o gate segue mordendo.
+      # PENDENTE: ao existir backend/requirements.lock, trocar para
+      #   `pip-audit -r requirements.lock` — audita SÓ as deps do projeto e o ruído do
+      #   `pip` do runner (toolchain) some sozinho (os PYSEC-2026-196/1795/1796/2875/2876).
+      - name: Audit de deps (pip-audit)
+        run: |
+          # pip/setuptools do runner variam com a imagem; atualizar evita reprovar por CVE do toolchain
+          # que já tem fix (ex.: PYSEC-2026-3721 no pip, PYSEC-2026-3447 no setuptools 79).
+          python -m pip install --upgrade pip setuptools
+          pip install pip-audit==2.10.1
+          IGNORES=""
+          # --- starlette 0.38.6 (transitiva de fastapi==0.115.0; fix exige bump -> SEC-15) ---
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-161"   # starlette — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-248"   # starlette — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-249"   # starlette — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-1941"  # starlette — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-1943"  # starlette — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-2280"  # starlette — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-2281"  # starlette — SEC-15, review-by: 2026-10-15
+          # --- pytest 8.3.3 (dev-only; fix 9.0.3 -> SEC-15) ---
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-1845"  # pytest — SEC-15, review-by: 2026-10-15
+          # --- pip do runner (toolchain, NÃO dep do projeto; some com -r requirements.lock) ---
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-196"   # pip runner — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-1795"  # pip runner — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-1796"  # pip runner — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-2875"  # pip runner — SEC-15, review-by: 2026-10-15
+          IGNORES="$IGNORES --ignore-vuln PYSEC-2026-2876"  # pip runner — SEC-15, review-by: 2026-10-15
+          pip-audit $IGNORES
 
       # Gate 1: suíte completa + gate global
       - name: Rodar suíte completa (gate global)
@@ -53,10 +102,10 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up Python (para dump_openapi.py)
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: "3.12"
 
@@ -65,7 +114,7 @@ jobs:
         working-directory: backend
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
           node-version: "20"
           cache: "npm"
@@ -76,6 +125,53 @@ jobs:
 
       - name: npm ci (deps pinadas)
         run: npm ci
+
+      # SEC-01 (T-S4-02) — Audit de deps de produção do frontend, FAIL-CLOSED com allowlist.
+      # SEC-01 (CVE-2025-66412 / GHSA-v4hv-rgfq-gp49) foi FECHADO pelo bump do Angular
+      # 19.2.14 → 19.2.25. Restam advisories High/Critical do @angular/* SEM fix
+      # disponível na linha 19.x (fix só em major 20/21/22) — dívida rastreada como
+      # SEC-16 (baseline), fix = bump major do Angular (19 → 20+).
+      # Espelha o padrão fail-closed do pip-audit do backend (SEC-15): allowlist
+      # CIRÚRGICA por GHSA ID, cada um comentado com motivo + review-by. QUALQUER
+      # advisory High/Critical fora da allowlist reprova o build (P-11, fail-closed
+      # de verdade — nunca `|| echo`/`|| true`). Se @angular/core regredir para
+      # 19.2.14 (ou qualquer versão vulnerável a GHSA-v4hv-rgfq-gp49), esse ID NÃO
+      # está na allowlist → o guard reprova (âncora do SEC-01).
+      - name: npm audit (prod, fail-closed com allowlist SEC-16)
+        run: |
+          npm audit --omit=dev --json > audit.json || true
+          node -e "
+          const ALLOW = new Set([
+            'GHSA-48r7-hpm6-gfxm', // SEC-16, review-by: 2026-10-15 - @angular/common DoS (OOM) em formatDate, sem fix em 19.x
+            'GHSA-39pv-4j6c-2g6v', // SEC-16, review-by: 2026-10-15 - @angular/common cache key hashing fraco (HttpTransferCache), sem fix em 19.x
+            'GHSA-58w9-8g37-x9v5', // SEC-16, review-by: 2026-10-15 - @angular/compiler two-way binding sanitization bypass, sem fix em 19.x
+            'GHSA-rgjc-h3x7-9mwg', // SEC-16, review-by: 2026-10-15 - @angular/core hydration DOM clobbering / cache poisoning, sem fix em 19.x
+            // Publicados após a Sprint 4 (auditados em 2026-10-13); 19.2.25 é a última 19.x, fix só no major (21.2.25).
+            'GHSA-jhpw-976m-542j', // SEC-16, review-by: 2026-10-15 - @angular/common cache-key ambíguo no HttpTransferCache, sem fix em 19.x
+            'GHSA-p297-fm68-3q8c', // SEC-16, review-by: 2026-10-15 - @angular/common leak via bypass do HttpTransferCache, sem fix em 19.x
+            'GHSA-jj27-h5hq-8x99', // SEC-16, review-by: 2026-10-15 - @angular/core+compiler XSS i18n em atributos de evento, sem fix em 19.x
+            'GHSA-hh8m-fm6v-7cvg', // SEC-16, review-by: 2026-10-15 - @angular/core+compiler sanitization bypass em host bindings, sem fix em 19.x
+            'GHSA-ff3f-86qr-9cv3', // SEC-16, review-by: 2026-10-15 - @angular/router DoS no SSR (app não usa SSR), sem fix em 19.x
+            // Publicados em 2026-10-20; sem fix em 19.x, fix só no major (20.3.33+ / 21.x / 22.x).
+            'GHSA-62vg-58rm-qff7', // SEC-16, review-by: 2026-11-20 - @angular/router DoS no SSR por outlet de path vazio (app não usa SSR), sem fix em 19.x
+            'GHSA-jfgx-762w-99vr', // SEC-16, review-by: 2026-11-20 - @angular/common vazamento do token XSRF por parsing de URL (app sem cookie/auth, nenhum token a vazar), sem fix em 19.x
+          ]);
+          const a = require('./audit.json');
+          const found = new Map();
+          for (const v of Object.values(a.vulnerabilities || {})) {
+            if (v.severity !== 'high' && v.severity !== 'critical') continue;
+            for (const x of v.via || []) {
+              if (typeof x === 'object' && x.url) found.set(x.url.split('/').pop(), v.severity);
+            }
+          }
+          const residual = [...found.entries()].filter(([id]) => !ALLOW.has(id));
+          if (residual.length) {
+            console.error('FALHA: advisories High/Critical fora da allowlist SEC-16:');
+            residual.forEach(([id, sev]) => console.error(' -', id, sev));
+            process.exit(1);
+          }
+          console.log('npm audit OK (fail-closed): High/Critical residuais =', found.size, '- todas cobertas por SEC-16 allowlist');
+          "
 
       # Gate de drift: regenera tipos do app vivo e verifica diff vazio.
       # Drift = build VERMELHO (P-11 — falha explícita, nunca aviso).
@@ -103,3 +199,40 @@ jobs:
       # NUNCA combinado com a cobertura do backend.
       - name: Testes + cobertura (2o ratchet front)
         run: npm run test:cov
+
+  # =========================================================================
+  # Job secret-scan — gitleaks (SEC-02 / T-S4-01)
+  # Gate AND com backend/frontend: secret-scan bloqueante (piso CLAUDE.md).
+  # Varre o HISTÓRICO completo (fetch-depth: 0), não só o tip — segredo removido
+  # no último commit não basta (docs/lessons/security.md — histórico cumulativo).
+  # Determinismo: CLI pinado em GITLEAKS_VERSION (paridade com o pre-commit v8.18.4).
+  # =========================================================================
+  secret-scan:
+    name: Secret scan (gitleaks — histórico completo)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # varre TODO o histórico, não só o HEAD
+
+      # SEC-02 (T-S4-01) — prova que o SCANNER MORDE, dentro do CI, sem depender de push.
+      # Instala o CLI gitleaks PINADO em 8.18.4 (paridade com o pre-commit e com a action)
+      # e roda o harness de canário sintético (red-green do detector — scripts/gitleaks-canary-test.sh).
+      # A prova de WIRING do job (branch efêmera reprovando o merge) é complementar e pendente-de-push.
+      - name: Prova do detector (gitleaks CLI 8.18.4 + harness de canário)
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -sSL -o gitleaks.tar.gz \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          bash "$GITHUB_WORKSPACE/scripts/gitleaks-canary-test.sh"
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITLEAKS_VERSION: "8.18.4" # PARIDADE com o pre-commit (mesma engine/regras)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false" # sem comentário no PR → dispensa pull-requests:write

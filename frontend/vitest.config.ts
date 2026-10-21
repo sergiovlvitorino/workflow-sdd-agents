@@ -33,7 +33,7 @@ export default defineConfig({
       ],
       thresholds: {
         // 2o ratchet aperatado em T-S3-07 — folga ≤1pp do patamar real medido.
-        // Real medido (T-S3-03+T-S3-07): stmts 98.38, branches 91.42, funcs 97.82, lines 98.38.
+        // Real medido (T-S3-03+T-S3-07): stmts 98.38, branches 91.34, funcs 97.82, lines 98.38.
         // Ratchet so sobe, nunca desce sem ADR (P-07).
         // Gate AND separado do Python (NUNCA media global combinada — ADR-0001 §4.1).
         branches: 90,

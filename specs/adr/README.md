@@ -12,6 +12,7 @@
 | [ADR-0004](ADR-0004-publicacao-sem-autenticacao.md) | Modelo de "publicar" sem autenticação | Aceito | 2026-06-25 | design-flow (`po`/`tl-python`/`tl-qa`) |
 | [ADR-0005](ADR-0005-contrato-tipos-frontend-openapi.md) | Contrato de tipos Frontend↔Backend: codegen a partir do OpenAPI | Aceito | 2026-06-25 | design-flow (`tl-frontend`/`tl-qa`/`tl-python`) |
 | [ADR-0006](ADR-0006-observabilidade-local-minima.md) | Observabilidade local mínima: logging estruturado + request_id | Aceito | 2026-06-25 | design-flow (`sre`/`tl-python`/`tl-qa`) |
+| [ADR-0007](ADR-0007-claim-idempotente-antes-de-criar.md) | Claim idempotente antes de criar: contrato de concorrência de `IdempotencyStore` (fecha SEC-03/P-03) | Aceito | 2026-07-15 | design-flow (`tl-python`/`tl-qa`/`fullstack-tech-lead`) |
 
 ## Convenções
 
