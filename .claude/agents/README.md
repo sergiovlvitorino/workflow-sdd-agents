@@ -32,6 +32,12 @@ Time de agentes versionado **dentro do repositório** (`.claude/agents/`). Como 
 |---|---|
 | `spec-python` · `spec-java` · `spec-go` · `spec-frontend` · `spec-qa` | mesma stack do `dev-*`/`qa`, com mandato de destravar |
 
+### Integração entre stacks — só quando a mudança cruza back e front (model: opus)
+| subagent_type | Foco |
+|---|---|
+| `fullstack-tech-lead` | Java/Spring + Angular: contrato REST, auth, CORS/CSRF, síntese de ADR no design-flow |
+| `fullstack-js` | Node + frontend JS: contrato, tipos compartilhados, SSR/BFF, monorepo. Consultivo, não edita |
+
 ### Produto & Qualidade
 | subagent_type | Foco |
 |---|---|
@@ -50,3 +56,18 @@ Time de agentes versionado **dentro do repositório** (`.claude/agents/`). Como 
 - **Um papel por pasta.** O `AGENT.md` é o system prompt do agente; o nome da pasta é o `subagent_type`.
 - **Não paralelize agentes que escrevem no mesmo repo + banco** (ver [`docs/lessons/process.md`](../../docs/lessons/process.md)). Serialize ou isole com worktree.
 - **Lições são in-repo** (`docs/lessons/`) e evoluem na retrospectiva de cada sprint (ver `sprint-flow` §4).
+- **Nenhum agente faz `git commit`/`push`** — isso fica com o orquestrador ou o usuário, e é **imposto por hook**, não só pedido no prompt.
+
+## Configuração (frontmatter)
+
+Campos aceitos pelo Claude Code: `name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`, `background`, `effort`, `isolation`, `color`, `omitClaudeMd`, `initialPrompt`. **Campo desconhecido é ignorado em silêncio** — não use `allowedTools` (nunca teve efeito).
+
+| Item | Regra |
+|------|-------|
+| `tools` | Sempre explícito. Implementadores: `Read, Grep, Glob, Bash, Edit, Write, WebSearch, WebFetch` — **sem `Agent`**. Revisores e especialistas: o mesmo + `Agent(Explore)`. `fullstack-js` é consultivo: sem `Edit`/`Write`. |
+| `hooks` | Versionados em [`.claude/hooks/`](../hooks/) e referenciados via `$CLAUDE_PROJECT_DIR` (requer `node` no PATH). `PreToolUse(Bash)` → `guard-subagent-bash.js` (bloqueia commit/push, checkout/restore/stash/reset --hard/clean, deploy/apply, AWS/kubectl/gh mutáveis, publish). `PreToolUse(SubagentHandback)` + `Stop` → `subagent-contract.js` (exige `## Verificação executada` nos implementadores e `VEREDITO:` na 1ª linha das revisões). |
+| `color` | dev = green · tl = blue · spec = purple · qa = yellow · sre = orange · po = pink · fullstack = cyan |
+| `maxTurns` | 80 nos `spec-*`: ao estourar, a saída volta marcada como parcial e o orquestrador pode retomar. |
+| `memory` | `project` em `tl-qa`, `sre` e `po` (fatos duráveis em `.claude/agent-memory/<nome>/`, versionáveis). |
+| Prompt enxuto | Catálogos longos ficam em `<agente>/REFERENCE.md` (sem frontmatter → documentação, não agente), lidos sob demanda: `tl-qa`, `tl-go`, `sre`, `qa-automator`. |
+| `isolation: worktree` | **Não usar nos revisores**: a worktree nasce do branch padrão, não da árvore de trabalho — o `tl-*` não veria o diff do `dev-*`. |

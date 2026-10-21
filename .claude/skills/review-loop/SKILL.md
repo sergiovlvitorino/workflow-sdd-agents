@@ -17,6 +17,7 @@ Quando o usuário pede para implementar uma tarefa/feature/correção e quer que
 - **Não pare no primeiro ciclo.** Só encerre quando TODOS os tech leads acionados retornarem aprovação sem ressalvas (ou apenas sugestões opcionais/nice-to-have explicitamente marcadas como não bloqueantes).
 - **Continuidade de contexto:** ao reacionar um agente que já rodou neste loop, prefira `SendMessage` (passando o ID/nome do agente) para preservar o contexto, em vez de abrir um agente novo do zero.
 - **Escalone quando o agente empacar.** Se o mesmo agente implementador falhar **3 ciclos** em satisfazer as ressalvas bloqueantes, a tarefa é transferida ao **agente especialista** da stack (ver mapeamento). Insistir com o mesmo agente após 3 tentativas tende a repetir o mesmo erro — o especialista entra com olhar fresco. Ver etapa §3.1.
+- **Consulte `known-defect-classes.md`** (nesta mesma pasta) antes dos passos 1 e 2. É uma lista compartilhada entre projetos de classes de defeito que já custaram ciclos de review — inclua no briefing só os itens relevantes à stack/arquivos da tarefa atual.
 
 ## Mapeamento stack → agentes
 
@@ -48,27 +49,38 @@ Regras:
 5. Mantenha um **contador de falhas por agente implementador** (cada `dev-*` e também o `qa`). Uma falha = um ciclo que termina com `VEREDITO: RESSALVAS` bloqueantes (ou em que o agente nem conseguiu rodar a verificação) para aquele agente. Ao chegar a **3 falhas** do mesmo agente, **escale para o especialista** da stack (§3.1). O contador é por agente: se a tarefa cruza duas stacks, cada par regular/especialista tem o seu.
 
 ### 1. Implementação (agentes implementadores)
+Antes de acionar, rode um **gate mecânico** (lint/type-check/testes/build já existentes) sobre o estado atual, se aplicável. Não pule direto para o dev com base em problemas que uma checagem automática já resolveria mais barato.
+
 Acione o(s) `dev-*` (ou `qa`, para tarefas de teste) com um prompt que contenha:
 - A descrição completa da tarefa.
 - Contexto relevante do projeto (arquivos/módulos alvo, padrões a seguir — leia os guias do repo, ex.: `CLAUDE.md`/`README`/`CONTRIBUTING`).
-- Instrução explícita de: implementar a solução, escrever/atualizar testes, rodar lint/type-check/testes quando aplicável, e **retornar um resumo objetivo das mudanças** (arquivos alterados, decisões tomadas, comandos de verificação executados e seus resultados).
+- Os itens relevantes de `known-defect-classes.md` para esta stack/tarefa.
+- Instrução explícita de: implementar a solução, escrever/atualizar testes que **provem via mutação** (quebrar de propósito, confirmar que reprova, reverter — não só cobertura de linha), rodar lint/type-check/testes quando aplicável, e **retornar um resumo objetivo das mudanças** (arquivos alterados, decisões tomadas, comandos de verificação executados e seus resultados).
 
 Aguarde a conclusão. Registre os arquivos tocados — eles são o escopo da revisão.
+
+### 1.5 Gate mecânico antes da revisão
+Antes de acionar os revisores, rode (ou confirme que o implementador rodou de fato, com saída registrada) lint/type-check/testes/build relevantes. **Se algo estiver vermelho por um problema mecânico óbvio, devolva direto ao implementador sem consumir um ciclo de revisor** — isso não conta para o contador de falhas do agente nem para o teto de iterações, é apenas uma correção mecânica pré-revisão.
 
 ### 2. Revisão (agentes tech leads)
 Acione **em paralelo** (um único bloco com múltiplas chamadas `Agent`) o(s) `tl-*` de stack e, quando aplicável, o `tl-qa`. Cada um com um prompt que contenha:
 - A descrição original da tarefa (o que deveria ser feito).
 - O resumo das mudanças entregue pelo implementador e a lista de arquivos alterados.
-- Instrução para fazer **code review READ-ONLY focado** nesses arquivos:
-  - **`tl-*` de stack:** correção, aderência à arquitetura e padrões do projeto, segurança, tratamento de erros e simplicidade.
-  - **`tl-qa`:** qualidade e força dos testes, determinismo (sem flaky), proteção das invariantes de negócio com testes negativos, e conformidade com os quality gates.
+- Os itens relevantes de `known-defect-classes.md`.
+- Instrução para fazer **code review focado** nesses arquivos, e não apenas ler:
+  - **`tl-*` de stack:** correção, aderência à arquitetura e padrões do projeto, segurança, tratamento de erros e simplicidade. Para os pontos críticos, **mutar o código numa cópia isolada** para validar se os testes realmente pegam o defeito ("que mutação esse assert pega?") — revisor que só lê tende a aprovar falso-verde.
+  - **`tl-qa`:** qualidade e força dos testes, determinismo (sem flaky), proteção das invariantes de negócio com testes negativos, conformidade com os quality gates, e **execução real** da suíte/cobertura (não aprovação por leitura).
+  - **Ambos:** se identificar um padrão de defeito numa classe/módulo, **verificar as unidades irmãs na mesma revisão** — não esperar outro ciclo.
 - Instrução de **formato de saída obrigatório**:
   - Primeira linha do veredito: `VEREDITO: APROVADO` **ou** `VEREDITO: RESSALVAS`.
   - Se `RESSALVAS`: uma lista numerada de itens **bloqueantes**, cada um com arquivo/linha, o problema e a ação corretiva esperada. Itens meramente opcionais devem ser marcados como `(opcional)` e NÃO contam como ressalva bloqueante.
 
 ### 3. Decisão do loop
 - Se **todos** os tech leads acionados (de stack **e** o `tl-qa`, quando presente) retornarem `VEREDITO: APROVADO` (ou apenas itens `(opcional)`): **encerre o loop** e vá para a etapa 4.
-- Caso contrário: consolide as ressalvas bloqueantes e volte à etapa 1, reacionando o(s) implementador(es) — de preferência via `SendMessage` para o mesmo agente — passando a lista de ressalvas e pedindo as correções. Depois revise novamente (etapa 2). Incremente o contador de iterações **e o contador de falhas do agente** que ainda tem ressalvas.
+- Caso contrário: **consolide todas as ressalvas bloqueantes num único envio** e volte à etapa 1, reacionando o(s) implementador(es) — de preferência via `SendMessage` para o mesmo agente. Nunca devolva revisor por revisor em ciclos separados quando ambos já responderam.
+  - Se dois revisores convergirem independentemente no mesmo achado, trate como confirmado — não é necessário um 3º revisor para validar.
+  - Se o mesmo item de config/spec for re-diagnosticado por 2ª vez com hipóteses diferentes, pare e peça um teste A/B controlado (trocar só a variável, medir, reverter) em vez de mais uma hipótese lida do código.
+- Depois revise novamente (etapa 2). Incremente o contador de iterações **e o contador de falhas do agente** que ainda tem ressalvas.
 - **Se um agente implementador atingir 3 falhas, não o reaccione: escale para o especialista (§3.1) antes de seguir.**
 - Atualize o TODO a cada ciclo.
 
@@ -76,7 +88,7 @@ Acione **em paralelo** (um único bloco com múltiplas chamadas `Agent`) o(s) `t
 Quando um agente implementador (`dev-*` ou `qa`) acumula **3 ciclos** sem resolver as ressalvas bloqueantes, transfira a tarefa ao `spec-*` da mesma stack (`dev-python`→`spec-python`, `dev-frontend`→`spec-frontend`, `dev-java`→`spec-java`, `dev-go`→`spec-go`, `qa`→`spec-qa`):
 
 - **Agente novo, contexto limpo:** acione o especialista com um agente **novo** (NÃO use `SendMessage` para o agente que falhou — o ponto é trocar de perspectiva, não herdar o contexto enviesado). Para o `spec-*` que assume, prefira `SendMessage` apenas nas iterações subsequentes do próprio especialista.
-- **Prompt do especialista:** inclua (a) a descrição original da tarefa e o spec/critérios; (b) a lista atual de ressalvas bloqueantes; (c) um **diagnóstico curto do porquê os 3 ciclos anteriores falharam** (o que o agente regular tentou e por que não satisfez os TLs); (d) os arquivos tocados. Instrua-o a reanalisar o problema desde a raiz, não apenas remendar a última tentativa.
+- **Prompt do especialista:** inclua (a) a descrição original da tarefa e o spec/critérios; (b) a lista atual de ressalvas bloqueantes; (c) um **diagnóstico curto do porquê os 3 ciclos anteriores falharam** (o que o agente regular tentou e por que não satisfez os TLs); (d) os arquivos tocados. Instrua-o a **reanalisar o diagnóstico do revisor, não só a solução proposta** — pode estar incompleto ou parcialmente errado — e a reanalisar o problema desde a raiz, não apenas remendar a última tentativa.
 - **Stack sem especialista:** se a stack não tiver `spec-*`, pare, reporte ao usuário as ressalvas em aberto e o histórico de falhas, e pergunte como proceder.
 - **Teto preservado:** a escalada **não reseta** o contador de iterações. O especialista assume as iterações restantes dentro do mesmo teto de 5; se ele também não aprovar até o teto, encerre pela etapa 4 reportando as ressalvas remanescentes.
 - A revisão (etapa 2) continua igual: os mesmos `tl-*`/`tl-qa` revisam o que o especialista entregar.
